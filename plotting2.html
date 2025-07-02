@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gráfico Interativo JS 2D e 3D</title>
+  <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background-color: #f5f5f5;
+    }
+    textarea, button, select {
+      width: 100%;
+      font-size: 16px;
+      margin-top: 10px;
+      padding: 10px;
+    }
+    #plot {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Gráfico Interativo com Código JavaScript</h2>
+
+  <label>Tipo de gráfico:</label>
+  <select id="tipo">
+    <option value="2d">2D (f(x))</option>
+    <option value="3d">3D (f(x, y))</option>
+  </select>
+
+  <label>Código da função:</label>
+  <textarea id="comandos" rows="8">
+// Exemplo para gráfico 2D:
+if (x === 0) return -80;
+else return x + 2;
+
+// Exemplo para gráfico 3D:
+//
+// if (x * y < 0) return Math.random() * 10;
+// return x*x - y*y;
+  </textarea>
+
+  <button onclick="plotar()">Plotar Gráfico</button>
+
+  <div id="plot"></div>
+
+  <script>
+    function gamma(z) {
+        const g = 7;
+        const p = [
+        0.99999999999980993, 676.5203681218851,   -1259.1392167224028,
+        771.32342877765313,  -176.61502916214059, 12.507343278686905,
+        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+        ];
+
+        if (z < 0.5) {
+        return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z));
+        } else {
+        z -= 1;
+        let result = p[0];
+        for (let i = 1; i < g + 2; i++) {
+            result += p[i] / (z + i);
+        }
+        const t = z + g + 0.5;
+        return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * result;
+        }
+    }
+
+    window.gamma = gamma; // 🔥 Faz a função gamma ficar acessível globalmente
+    
+    function plotar() {
+      const tipo = document.getElementById("tipo").value;
+      const comandos = document.getElementById("comandos").value;
+
+      let f;
+      try {
+        f = new Function('x', 'y', `
+          try {
+            ${comandos}
+          } catch(e) {
+            return NaN;
+          }
+        `);
+      } catch (e) {
+        alert("Erro ao criar a função:\n" + e.message);
+        return;
+      }
+
+      if (tipo === "2d") {
+        const x = [], y = [];
+        for (let i = -20; i <= 20; i += 0.2) {
+          let result;
+          try {
+            result = f(i, 0);
+            if (typeof result !== 'number' || !isFinite(result)) result = null;
+          } catch {
+            result = null;
+          }
+          x.push(i);
+          y.push(result);
+        }
+
+        Plotly.newPlot("plot", [{
+          x: x,
+          y: y,
+          mode: "lines+markers",
+          type: "scatter"
+        }], {
+          title: "Gráfico 2D de f(x)",
+          xaxis: { title: "x" },
+          yaxis: { title: "f(x)" }
+        });
+
+      } else {
+        const x_vals = [], y_vals = [], z_vals = [];
+
+        for (let xi = -10; xi <= 10; xi += 1) x_vals.push(xi);
+        for (let yi = -10; yi <= 10; yi += 1) y_vals.push(yi);
+
+        for (let i = 0; i < y_vals.length; i++) {
+          const row = [];
+          for (let j = 0; j < x_vals.length; j++) {
+            let z;
+            try {
+              z = f(x_vals[j], y_vals[i]);
+              if (typeof z !== 'number' || !isFinite(z)) z = null;
+            } catch {
+              z = null;
+            }
+            row.push(z);
+          }
+          z_vals.push(row);
+        }
+
+        Plotly.newPlot("plot", [{
+          type: "surface",
+          x: x_vals,
+          y: y_vals,
+          z: z_vals
+        }], {
+          title: "Gráfico 3D de f(x, y)",
+          scene: {
+            xaxis: { title: "x" },
+            yaxis: { title: "y" },
+            zaxis: { title: "f(x, y)" }
+          }
+        });
+      }
+    }
+  </script>
+
+</body>
+</html>
